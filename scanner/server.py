@@ -118,18 +118,17 @@ state = {
 lock = threading.Lock()
 
 
-def _bars(df: pd.DataFrame) -> list[dict]:
+def _bars(df: pd.DataFrame, limit: int = 200) -> list[list]:
     rows = []
-    view = df.tail(280)
-    for ts, row in view.iterrows():
+    for ts, row in df.tail(limit).iterrows():
         rows.append(
-            {
-                "time": pd.Timestamp(ts).strftime("%Y-%m-%d"),
-                "open": round(float(row.Open), 4),
-                "high": round(float(row.High), 4),
-                "low": round(float(row.Low), 4),
-                "close": round(float(row.Close), 4),
-            }
+            [
+                pd.Timestamp(ts).strftime("%Y-%m-%d"),
+                round(float(row.Open), 4),
+                round(float(row.High), 4),
+                round(float(row.Low), 4),
+                round(float(row.Close), 4),
+            ]
         )
     return rows
 
@@ -170,7 +169,21 @@ def _sort_hits(hits: list[dict]) -> list[dict]:
     return sorted(hits, key=key)
 
 
-def run_scan(symbols: list[str], label: str) -> None:
+def run_scan(symbols: list[str], label: str, keep: bool = False) -> None:
+    prior_hits: list[dict] = []
+    prior_bars: dict = {}
+    if keep and LAST.exists():
+        try:
+            saved = json.loads(LAST.read_text())
+            fresh = set(symbols)
+            prior_hits = [hit for hit in saved.get("hits") or [] if hit.get("symbol") not in fresh]
+            prior_bars = {
+                key: value
+                for key, value in (saved.get("bars") or {}).items()
+                if key.split("|", 1)[0] not in fresh
+            }
+        except Exception:
+            prior_hits, prior_bars = [], {}
     try:
         with lock:
             state.update(
@@ -180,12 +193,12 @@ def run_scan(symbols: list[str], label: str) -> None:
                 total=len(symbols),
                 error=None,
                 list=label,
-                hits=[],
-                bars={},
+                hits=list(prior_hits),
+                bars=dict(prior_bars),
             )
         data = None
-        hits = []
-        bars = {}
+        hits = list(prior_hits)
+        bars = dict(prior_bars)
         batch = 25
         for start in range(0, len(symbols), batch):
             chunk = symbols[start : start + batch]
@@ -217,11 +230,11 @@ def run_scan(symbols: list[str], label: str) -> None:
                     prev = float(frame.Close.iloc[-2])
                     change = (last - prev) / prev * 100 if prev else 0.0
                     if daily is not None and any(hit.get("tf") != "W" for hit in found):
-                        bars[f"{sym}|D"] = _bars(daily)
+                        bars[f"{sym}|D"] = _bars(daily, 200)
                     if any(hit.get("tf") == "W" for hit in found) and daily is not None:
                         weekly = prepare(_weekly(daily))
                         if weekly is not None:
-                            bars[f"{sym}|W"] = _bars(weekly)
+                            bars[f"{sym}|W"] = _bars(weekly, 80)
                     for hit in found:
                         hit["last"] = round(last, 4)
                         hit["change"] = round(change, 2)
