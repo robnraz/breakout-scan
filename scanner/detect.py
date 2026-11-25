@@ -65,7 +65,7 @@ def _extend(index, x1, y1, x2, y2, x_end) -> float:
     return float(y1 + slope * (int(i_end) - i1))
 
 
-def find_flat_triangles(df: pd.DataFrame, max_age: int = 40) -> dict | None:
+def find_flat_triangles(df: pd.DataFrame, max_age: int = 80) -> dict | None:
     """Ascending or descending triangle with one horizontal side, still forming."""
     pivots = swing.get_max_min(df, barsLeft=5, barsRight=5, pivot_type="both")
     if pivots is None or len(pivots) < 5:
@@ -89,7 +89,7 @@ def find_flat_triangles(df: pd.DataFrame, max_age: int = 40) -> dict | None:
     f = _num(df.Close.iloc[-1])
     atr = float((df.High - df.Low).tail(14).median()) or 0.0
     best = None
-    recent_cut = df.index[-120] if len(df) > 120 else df.index[0]
+    recent_cut = df.index[-180] if len(df) > 180 else df.index[0]
 
     for e_i, (e_idx, e) in enumerate(highs):
         if e_idx < recent_cut:
@@ -99,7 +99,7 @@ def find_flat_triangles(df: pd.DataFrame, max_age: int = 40) -> dict | None:
             for a_i in range(c_i - 1, -1, -1):
                 a_idx, a = highs[a_i]
                 span_days = (e_idx - a_idx).days
-                if span_days < 30 or span_days > (500 if max_age > 40 else 200):
+                if span_days < 30 or span_days > 500:
                     continue
                 b_candidates = [(ts, p) for ts, p in lows if a_idx < ts < c_idx]
                 d_candidates = [(ts, p) for ts, p in lows if c_idx < ts < e_idx]
@@ -112,13 +112,13 @@ def find_flat_triangles(df: pd.DataFrame, max_age: int = 40) -> dict | None:
                 if len(sl) < 12:
                     continue
                 avg_bar = float((sl["High"] - sl["Low"]).median()) or atr
-                kind = swing.is_triangle(a, b, c, d, e, f, avg_bar)
+                kind = swing.is_triangle(a, b, c, d, e, f, max(avg_bar * 2.2, f * 0.018))
                 if kind not in ("Ascending", "Descending"):
                     continue
                 if int(df.index.get_loc(f_idx)) - int(df.index.get_loc(e_idx)) > max_age:
                     continue
 
-                flat_tol = max(min(avg_bar * 0.85, f * 0.012), f * 0.004)
+                flat_tol = max(min(avg_bar * 1.6, f * 0.02), f * 0.006)
                 if kind == "Ascending":
                     flat_points = (a, c, e)
                     flat = float(pd.Series(flat_points).median())
@@ -391,7 +391,7 @@ def scan_frame(sym: str, df: pd.DataFrame) -> list[dict]:
         return []
     hits = []
     try:
-        triangle = find_flat_triangles(daily, max_age=40)
+        triangle = find_flat_triangles(daily, max_age=80)
     except Exception:
         triangle = None
     if triangle:
@@ -405,7 +405,7 @@ def scan_frame(sym: str, df: pd.DataFrame) -> list[dict]:
     weekly = prepare(_weekly(daily))
     if weekly is not None:
         try:
-            triangle_w = find_flat_triangles(weekly, max_age=20)
+            triangle_w = find_flat_triangles(weekly, max_age=36)
         except Exception:
             triangle_w = None
         if triangle_w:
