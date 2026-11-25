@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Breakout scan</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <div>
+        <h1>Breakout scan</h1>
+        <p>Only patterns still forming. Ascending and descending triangles, and horizontal levels with at least two hits. A move that already ran is left out.</p>
+      </div>
+    </div>
+    <form id="controls" class="controls">
+      <div class="lists" role="radiogroup" aria-label="Universe">
+        <label><input type="radio" name="list" value="core" checked> Core</label>
+        <label><input type="radio" name="list" value="us"> US large</label>
+        <label><input type="radio" name="list" value="all"> All US</label>
+        <label><input type="radio" name="list" value="europe"> Europe</label>
+        <label><input type="radio" name="list" value="both"> US large + Europe</label>
+        <label><input type="radio" name="list" value="futures"> Futures</label>
+      </div>
+      <input id="extra" name="symbols" type="text" placeholder="Add tickers, e.g. PFE, GC=F" autocomplete="off" spellcheck="false">
+      <button id="scan" type="submit">Scan</button>
+    </form>
+  </header>
+
+  <p id="status" class="status" role="status">Starting the first scan.</p>
+
+  <div class="filters" role="tablist" aria-label="Pattern">
+    <button type="button" class="on" data-filter="all">All</button>
+    <button type="button" data-filter="triangle">Triangles</button>
+    <button type="button" data-filter="horizontal">Horizontal levels</button>
+    <button type="button" class="on" data-tf="all">Daily + weekly</button>
+    <button type="button" data-tf="D">Daily</button>
+    <button type="button" data-tf="W">Weekly</button>
+  </div>
+
+  <main>
+    <section class="list-wrap">
+      <div id="list" class="list" role="listbox" aria-label="Hits"></div>
+    </section>
+    <section class="chart-wrap">
+      <div class="chart-head">
+        <div>
+          <h2 id="chart-title">No chart yet</h2>
+          <p id="chart-sub"></p>
+        </div>
+        <p id="chart-px" class="px"></p>
+      </div>
+      <div id="chart"></div>
+      <p id="detail" class="detail"></p>
+    </section>
+  </main>
+
+  <footer>
+    Triangle test and swing pivots from <a href="https://github.com/BennyThadikaran/stock-pattern">stock-pattern</a> (GPL-3.0). Symmetric triangles are excluded. Charts by TradingView Lightweight Charts. Daily prices from Yahoo Finance. This is a pattern list, not a trade signal.
+  </footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
