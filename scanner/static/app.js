@@ -62,7 +62,7 @@ function visibleHits() {
 }
 
 function money(n) {
-  if (n == null || Number.isNaN(n)) return "\u2014";
+  if (n == null || Number.isNaN(n)) return "—";
   const abs = Math.abs(n);
   const digits = abs >= 1000 ? 1 : abs >= 20 ? 2 : abs >= 2 ? 3 : abs >= 0.5 ? 4 : 5;
   return n.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -95,7 +95,7 @@ function renderList() {
     px.textContent = money(hit.last);
     const name = document.createElement("span");
     name.className = "name";
-    name.textContent = hit.hits ? `${hit.name} \u00b7 ${hit.hits} hits` : hit.name;
+    name.textContent = hit.hits ? `${hit.name} · ${hit.hits} hits` : hit.name;
     const ch = document.createElement("span");
     ch.className = "px " + (change >= 0 ? "up" : "down");
     ch.textContent = `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
@@ -125,15 +125,15 @@ function renderChart() {
   selected = hitKey(hit);
   const bars = (snapshot.bars && (snapshot.bars[hit.key] || snapshot.bars[`${hit.symbol}|${hit.tf || "D"}`])) || [];
   const token = `${hitKey(hit)}:${bars.length}`;
-  titleEl.textContent = `${hit.label || hit.symbol} \u00b7 ${hit.name}`;
+  titleEl.textContent = `${hit.label || hit.symbol} · ${hit.name}`;
   const bits = [hit.side];
   if (hit.level != null) bits.push(`level ${money(hit.level)}`);
   if (hit.hits) bits.push(`${hit.hits} touches`);
-  subEl.textContent = bits.join(" \u00b7 ");
+  subEl.textContent = bits.join(" · ");
   const change = hit.change || 0;
   pxEl.textContent = `${money(hit.last)}  ${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
   pxEl.className = "px " + (change >= 0 ? "up" : "down");
-  const touches = hit.points ? Object.entries(hit.points).map(([k, v]) => `${k} ${v[0]}`).join(" \u00b7 ") : "";
+  const touches = hit.points ? Object.entries(hit.points).map(([k, v]) => `${k} ${v[0]}`).join(" · ") : "";
   detailEl.textContent = touches;
 
   if (!bars.length) return;
