@@ -56,12 +56,12 @@ CORE = [
 # Every front-month contract Yahoo actually publishes. Dated expiries are
 # left out: they do not have a multi-year history to scan.
 FUTURES = (
-    "ES=F NQ=F YM=F RTY=F NKD=F MES=F MNQ=F MYM=F M2K=F EMD=F NIY=F "
-    "BTC=F ETH=F MBT=F MET=F "
-    "6E=F 6J=F 6B=F 6A=F 6C=F 6S=F 6N=F 6M=F M6E=F M6A=F M6B=F "
+    "ES=F NQ=F YM=F RTY=F NKD=F EMD=F NIY=F "
+    "BTC=F ETH=F "
+    "6E=F 6J=F 6B=F 6A=F 6C=F 6S=F 6N=F 6M=F "
     "ZB=F ZN=F ZF=F ZT=F UB=F TN=F SR3=F "
-    "GC=F SI=F HG=F PL=F PA=F MGC=F SIL=F ALI=F "
-    "CL=F BZ=F NG=F HO=F RB=F MCL=F "
+    "GC=F SI=F HG=F PL=F PA=F ALI=F "
+    "CL=F BZ=F NG=F HO=F RB=F "
     "ZC=F ZW=F ZS=F ZM=F ZL=F ZO=F ZR=F KE=F "
     "LE=F HE=F GF=F DC=F "
     "KC=F SB=F CC=F CT=F OJ=F LBR=F"
