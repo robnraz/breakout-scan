@@ -30,13 +30,16 @@ def main() -> None:
             ("europe", EUROPE),
             ("us", US),
         ]
+    keep = stage == "rest"
+    first = True
     for label, symbols in stages:
         try:
             print(f"stage {label} {len(symbols)}", flush=True)
-            run_scan(symbols, label)
+            run_scan(symbols, label, keep=keep or not first)
         except Exception as exc:
             print(f"stage {label} failed: {exc}", flush=True)
             break
+        first = False
     publish()
 
 
