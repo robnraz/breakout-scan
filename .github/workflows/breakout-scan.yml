@@ -1,0 +1,38 @@
+name: Daily breakout scan
+
+on:
+  schedule:
+    # 21:30 UTC, after the US cash close, weekdays.
+    - cron: "30 21 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install yfinance pandas
+      - name: Scan the liquid lists
+        working-directory: scanner
+        run: python job.py quick
+      - name: Publish
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: scanner/site
+      - name: Scan the full US list
+        working-directory: scanner
+        run: python job.py rest
+      - name: Publish full results
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: scanner/site
