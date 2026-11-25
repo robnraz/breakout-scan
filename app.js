@@ -60,6 +60,10 @@ function closeness(hit) {
 }
 
 function betterHit(a, b) {
+  if (a.pattern !== b.pattern) {
+    if (a.pattern === "triangle") return true;
+    if (b.pattern === "triangle") return false;
+  }
   const gap = closeness(a) - closeness(b);
   if (Math.abs(gap) > 0.008) return gap < 0;
   if (tf === "all" && a.tf !== b.tf) return a.tf === "D";
@@ -215,9 +219,13 @@ function renderChart() {
     lines.push(series);
   });
   const start = hit.points && Object.values(hit.points)[0] ? Object.values(hit.points)[0][0] : hit.lines?.[0]?.points?.[0]?.[0];
-  const from = bars.findIndex((bar) => bar.time >= start);
+  const year = hit.tf === "W" ? 52 : 252;
+  let from = start ? bars.findIndex((bar) => bar.time >= start) : 0;
+  if (from < 0) from = 0;
+  from = Math.max(0, from - 10);
+  if (bars.length - from < year) from = Math.max(0, bars.length - year);
   chart.timeScale().setVisibleLogicalRange({
-    from: Math.max(0, (from < 0 ? bars.length - 120 : from) - 8),
+    from,
     to: bars.length + 3,
   });
 }
