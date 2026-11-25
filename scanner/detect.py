@@ -228,6 +228,41 @@ def _cluster(points: list[tuple], tol: float) -> list[dict]:
     return groups
 
 
+def _unbroken(window: pd.DataFrame, level: float, role: str, weekly: bool) -> bool:
+    """The line held. A day or two a little through it is fine.
+
+    A close several percent through the line, or a string of closes on the
+    wrong side, means price already went through and came back.
+    """
+    if window.empty or level <= 0:
+        return False
+    atr = float((window["High"] - window["Low"]).tail(14).median()) or level * 0.01
+    poke = max(level * 0.012, atr * 0.35)
+    hard = level * 0.03
+    closes = window["Close"].astype(float)
+    if role == "resistance":
+        beyond = closes - level
+        wick = window["High"].astype(float) - level
+    else:
+        beyond = level - closes
+        wick = level - window["Low"].astype(float)
+    if float(beyond.max()) > hard or float(wick.max()) > level * 0.045:
+        return False
+    max_run = 1 if weekly else 2
+    max_total = 2 if weekly else 3
+    run = 0
+    worst = 0
+    total = 0
+    for value in beyond:
+        if value > poke:
+            run += 1
+            total += 1
+            worst = max(worst, run)
+        else:
+            run = 0
+    return worst <= max_run and total <= max_total
+
+
 def find_horizontal(df: pd.DataFrame, weekly: bool = False, min_hits: int = 2) -> list[dict]:
     """Horizontal the price is back on, daily or weekly."""
     left = 3 if weekly else 5
@@ -293,6 +328,9 @@ def find_horizontal(df: pd.DataFrame, weekly: bool = False, min_hits: int = 2) -
             elif kind == "high" and above <= 0.45:
                 label = "Testing resistance"
             else:
+                continue
+            role = "support" if label == "Testing support" else "resistance"
+            if not _unbroken(window, level, role, weekly):
                 continue
             found.append(
                 {
