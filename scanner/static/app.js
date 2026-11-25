@@ -14,6 +14,7 @@ const chartHost = document.getElementById("chart");
 
 let snapshot = { hits: [], bars: {}, running: true, live: true };
 let filter = "all";
+let universe = document.querySelector('input[name="list"]:checked')?.value || "core";
 let tf = "all";
 let selected = null;
 let drawn = null;
@@ -65,8 +66,26 @@ function betterHit(a, b) {
   return (a.hits || 0) > (b.hits || 0);
 }
 
+function hitGroups(hit) {
+  if (Array.isArray(hit.groups) && hit.groups.length) return hit.groups;
+  if (hit.group) return [hit.group];
+  return null;
+}
+
+function hasUniverse(name) {
+  return (snapshot.hits || []).some((hit) => (hitGroups(hit) || []).includes(name));
+}
+
+function inUniverse(hit) {
+  const groups = hitGroups(hit);
+  if (!groups) return true;
+  if (universe === "both") return groups.includes("us") || groups.includes("europe");
+  return groups.includes(universe);
+}
+
 function visibleHits() {
   const rows = (snapshot.hits || []).filter((hit) => {
+    if (!inUniverse(hit)) return false;
     const patternOk = filter === "all" || hit.pattern === filter;
     const tfOk = tf === "all" || hit.tf === tf;
     return patternOk && tfOk;
@@ -262,8 +281,24 @@ form.addEventListener("submit", async (event) => {
 
 form.querySelectorAll('input[name="list"]').forEach((input) => {
   input.addEventListener("change", () => {
-    if (snapshot.live === false || snapshot.running) return;
-    form.requestSubmit();
+    universe = input.value;
+    selected = null;
+    drawn = null;
+    const needed = universe === "both" ? ["us", "europe"] : [universe];
+    const present = needed.some((name) => hasUniverse(name));
+    const tagged = (snapshot.hits || []).some((hit) => hitGroups(hit));
+    if (snapshot.live && !snapshot.running && (!tagged || !present)) {
+      form.requestSubmit();
+      return;
+    }
+    renderStatus();
+    renderList();
+    renderChart();
+    if (!present) {
+      statusEl.textContent = universe === "all"
+        ? "The full US list publishes with the morning run."
+        : "That list is not in this scan.";
+    }
   });
 });
 
