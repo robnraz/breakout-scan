@@ -332,6 +332,16 @@ def find_horizontal(df: pd.DataFrame, weekly: bool = False, min_hits: int = 2) -
             role = "support" if label == "Testing support" else "resistance"
             if not _unbroken(window, level, role, weekly):
                 continue
+            # The latest push has to meet the line. A 2% gap is a line in the air.
+            band = level * (0.018 if weekly else 0.015)
+            if role == "resistance":
+                extreme = float(df["High"].tail(4 if weekly else 15).max())
+                if extreme < level - band:
+                    continue
+            else:
+                extreme = float(df["Low"].tail(15 if not weekly else 4).min())
+                if extreme > level + band:
+                    continue
             found.append(
                 {
                     "pattern": "horizontal",
