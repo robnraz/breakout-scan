@@ -14,6 +14,7 @@ const chartHost = document.getElementById("chart");
 
 let snapshot = { hits: [], bars: {}, running: true, live: true };
 let filter = "all";
+let universe = document.querySelector('input[name="list"]:checked')?.value || "core";
 let tf = "all";
 let selected = null;
 let drawn = null;
@@ -53,11 +54,61 @@ function clearLines() {
   while (lines.length) chart.removeSeries(lines.pop());
 }
 
+function closeness(hit) {
+  if (!hit.level || !hit.last) return 1;
+  return Math.abs(hit.last - hit.level) / Math.abs(hit.last);
+}
+
+function betterHit(a, b) {
+  const gap = closeness(a) - closeness(b);
+  if (Math.abs(gap) > 0.008) return gap < 0;
+  if (tf === "all" && a.tf !== b.tf) return a.tf === "D";
+  return (a.hits || 0) > (b.hits || 0);
+}
+
+function hitGroups(hit) {
+  if (Array.isArray(hit.groups) && hit.groups.length) return hit.groups;
+  if (hit.group) return [hit.group];
+  return null;
+}
+
+function hasUniverse(name) {
+  return (snapshot.hits || []).some((hit) => (hitGroups(hit) || []).includes(name));
+}
+
+function inUniverse(hit) {
+  const groups = hitGroups(hit);
+  if (!groups) return true;
+  if (universe === "both") return groups.includes("us") || groups.includes("europe");
+  return groups.includes(universe);
+}
+
 function visibleHits() {
-  return (snapshot.hits || []).filter((hit) => {
+  const rows = (snapshot.hits || []).filter((hit) => {
+    if (!inUniverse(hit)) return false;
     const patternOk = filter === "all" || hit.pattern === filter;
     const tfOk = tf === "all" || hit.tf === tf;
     return patternOk && tfOk;
+  });
+  const best = new Map();
+  const order = [];
+  for (const hit of rows) {
+    const prev = best.get(hit.symbol);
+    if (!prev) {
+      order.push(hit.symbol);
+      best.set(hit.symbol, hit);
+    } else if (betterHit(hit, prev)) {
+      best.set(hit.symbol, hit);
+    }
+  }
+  return order.map((symbol) => best.get(symbol));
+}
+
+function otherTimeframe(hit) {
+  const other = hit.tf === "W" ? "D" : "W";
+  return (snapshot.hits || []).some((row) => {
+    if (row.symbol !== hit.symbol || row.tf !== other) return false;
+    return filter === "all" || row.pattern === filter;
   });
 }
 
@@ -95,7 +146,8 @@ function renderList() {
     px.textContent = money(hit.last);
     const name = document.createElement("span");
     name.className = "name";
-    name.textContent = hit.hits ? `${hit.name} · ${hit.hits} hits` : hit.name;
+    const also = otherTimeframe(hit) ? (hit.tf === "D" ? " · weekly too" : " · daily too") : "";
+    name.textContent = (hit.hits ? `${hit.name} · ${hit.hits} hits` : hit.name) + also;
     const ch = document.createElement("span");
     ch.className = "px " + (change >= 0 ? "up" : "down");
     ch.textContent = `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
@@ -123,7 +175,10 @@ function renderChart() {
     return;
   }
   selected = hitKey(hit);
-  const bars = (snapshot.bars && (snapshot.bars[hit.key] || snapshot.bars[`${hit.symbol}|${hit.tf || "D"}`])) || [];
+  const raw = (snapshot.bars && (snapshot.bars[hit.key] || snapshot.bars[`${hit.symbol}|${hit.tf || "D"}`])) || [];
+  const bars = Array.isArray(raw[0])
+    ? raw.map(([time, open, high, low, close]) => ({ time, open, high, low, close }))
+    : raw;
   const token = `${hitKey(hit)}:${bars.length}`;
   titleEl.textContent = `${hit.label || hit.symbol} · ${hit.name}`;
   const bits = [hit.side];
@@ -180,9 +235,8 @@ function renderStatus() {
   }
   const n = (snapshot.hits || []).length;
   const shown = visibleHits().length;
-  const triangles = (snapshot.hits || []).filter((h) => h.pattern === "triangle").length;
   const when = snapshot.updated ? ` Last scan ${snapshot.updated}.` : "";
-  statusEl.textContent = `${shown} shown, ${n} hits, ${triangles} triangles.${when}`;
+  statusEl.textContent = `${shown} names${n > shown ? `, ${n} patterns` : ""}.${when}`;
 }
 
 async function loadSnapshot() {
@@ -227,8 +281,24 @@ form.addEventListener("submit", async (event) => {
 
 form.querySelectorAll('input[name="list"]').forEach((input) => {
   input.addEventListener("change", () => {
-    if (snapshot.live === false || snapshot.running) return;
-    form.requestSubmit();
+    universe = input.value;
+    selected = null;
+    drawn = null;
+    const needed = universe === "both" ? ["us", "europe"] : [universe];
+    const present = needed.some((name) => hasUniverse(name));
+    const tagged = (snapshot.hits || []).some((hit) => hitGroups(hit));
+    if (snapshot.live && !snapshot.running && (!tagged || !present)) {
+      form.requestSubmit();
+      return;
+    }
+    renderStatus();
+    renderList();
+    renderChart();
+    if (!present) {
+      statusEl.textContent = universe === "all"
+        ? "The full US list publishes with the morning run."
+        : "That list is not in this scan.";
+    }
   });
 });
 
