@@ -244,11 +244,11 @@ def run_scan(symbols: list[str], label: str, keep: bool = False) -> None:
                     prev = float(frame.Close.iloc[-2])
                     change = (last - prev) / prev * 100 if prev else 0.0
                     if daily is not None and any(hit.get("tf") != "W" for hit in found):
-                        bars[f"{sym}|D"] = _bars(daily, 200)
+                        bars[f"{sym}|D"] = _bars(daily, 520)
                     if any(hit.get("tf") == "W" for hit in found) and daily is not None:
                         weekly = prepare(_weekly(daily))
                         if weekly is not None:
-                            bars[f"{sym}|W"] = _bars(weekly, 80)
+                            bars[f"{sym}|W"] = _bars(weekly, 110)
                     for hit in found:
                         hit["last"] = round(last, 4)
                         hit["change"] = round(change, 2)
