@@ -60,6 +60,10 @@ function closeness(hit) {
 }
 
 function betterHit(a, b) {
+  if (a.pattern !== b.pattern) {
+    if (a.pattern === "triangle") return true;
+    if (b.pattern === "triangle") return false;
+  }
   const gap = closeness(a) - closeness(b);
   if (Math.abs(gap) > 0.008) return gap < 0;
   if (tf === "all" && a.tf !== b.tf) return a.tf === "D";
@@ -113,7 +117,7 @@ function otherTimeframe(hit) {
 }
 
 function money(n) {
-  if (n == null || Number.isNaN(n)) return "—";
+  if (n == null || Number.isNaN(n)) return "\u2014";
   const abs = Math.abs(n);
   const digits = abs >= 1000 ? 1 : abs >= 20 ? 2 : abs >= 2 ? 3 : abs >= 0.5 ? 4 : 5;
   return n.toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -146,8 +150,8 @@ function renderList() {
     px.textContent = money(hit.last);
     const name = document.createElement("span");
     name.className = "name";
-    const also = otherTimeframe(hit) ? (hit.tf === "D" ? " · weekly too" : " · daily too") : "";
-    name.textContent = (hit.hits ? `${hit.name} · ${hit.hits} hits` : hit.name) + also;
+    const also = otherTimeframe(hit) ? (hit.tf === "D" ? " \u00b7 weekly too" : " \u00b7 daily too") : "";
+    name.textContent = (hit.hits ? `${hit.name} \u00b7 ${hit.hits} hits` : hit.name) + also;
     const ch = document.createElement("span");
     ch.className = "px " + (change >= 0 ? "up" : "down");
     ch.textContent = `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
@@ -180,15 +184,15 @@ function renderChart() {
     ? raw.map(([time, open, high, low, close]) => ({ time, open, high, low, close }))
     : raw;
   const token = `${hitKey(hit)}:${bars.length}`;
-  titleEl.textContent = `${hit.label || hit.symbol} · ${hit.name}`;
+  titleEl.textContent = `${hit.label || hit.symbol} \u00b7 ${hit.name}`;
   const bits = [hit.side];
   if (hit.level != null) bits.push(`level ${money(hit.level)}`);
   if (hit.hits) bits.push(`${hit.hits} touches`);
-  subEl.textContent = bits.join(" · ");
+  subEl.textContent = bits.join(" \u00b7 ");
   const change = hit.change || 0;
   pxEl.textContent = `${money(hit.last)}  ${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
   pxEl.className = "px " + (change >= 0 ? "up" : "down");
-  const touches = hit.points ? Object.entries(hit.points).map(([k, v]) => `${k} ${v[0]}`).join(" · ") : "";
+  const touches = hit.points ? Object.entries(hit.points).map(([k, v]) => `${k} ${v[0]}`).join(" \u00b7 ") : "";
   detailEl.textContent = touches;
 
   if (!bars.length) return;
@@ -215,9 +219,13 @@ function renderChart() {
     lines.push(series);
   });
   const start = hit.points && Object.values(hit.points)[0] ? Object.values(hit.points)[0][0] : hit.lines?.[0]?.points?.[0]?.[0];
-  const from = bars.findIndex((bar) => bar.time >= start);
+  const year = hit.tf === "W" ? 52 : 252;
+  let from = start ? bars.findIndex((bar) => bar.time >= start) : 0;
+  if (from < 0) from = 0;
+  from = Math.max(0, from - 10);
+  if (bars.length - from < year) from = Math.max(0, bars.length - year);
   chart.timeScale().setVisibleLogicalRange({
-    from: Math.max(0, (from < 0 ? bars.length - 120 : from) - 8),
+    from,
     to: bars.length + 3,
   });
 }
