@@ -95,6 +95,20 @@ def _us_all() -> list[str]:
 
 US_ALL = _us_all()
 
+_LIST_SETS = {
+    "core": set(CORE),
+    "us": set(US),
+    "europe": set(EUROPE),
+    "futures": set(FUTURES),
+}
+
+
+def groups_for(sym: str, label: str) -> list[str]:
+    found = [name for name, symbols in _LIST_SETS.items() if sym in symbols]
+    if label == "all":
+        found.append("all")
+    return found or [label]
+
 LISTS = {
     "core": CORE,
     "us": US,
@@ -240,6 +254,7 @@ def run_scan(symbols: list[str], label: str, keep: bool = False) -> None:
                         hit["change"] = round(change, 2)
                         hit["label"] = sym.split("=")[0] if "=" in sym else sym
                         hit["key"] = f"{sym}|{hit.get('tf', 'D')}"
+                        hit["groups"] = groups_for(sym, label)
                         hits.append(_json_hit(hit))
                 with lock:
                     state["done"] = start + offset
