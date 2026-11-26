@@ -275,7 +275,7 @@ async function loadSnapshot() {
     data.live = true;
     return data;
   } catch {
-    const res = await fetch("last.json", { cache: "no-store" });
+    const res = await fetch("last.json?v=7", { cache: "no-store" });
     const data = await res.json();
     data.live = false;
     data.running = false;
