@@ -170,6 +170,10 @@ function hitKey(hit) {
 }
 
 function renderChart() {
+  return drawChart();
+}
+
+async function drawChart() {
   const hit = visibleHits().find((row) => hitKey(row) === selected) || visibleHits()[0];
   if (!hit) {
     titleEl.textContent = snapshot.running ? "Scan in progress" : "Nothing matched";
@@ -179,7 +183,22 @@ function renderChart() {
     return;
   }
   selected = hitKey(hit);
-  const raw = (snapshot.bars && (snapshot.bars[hit.key] || snapshot.bars[`${hit.symbol}|${hit.tf || "D"}`])) || [];
+  const key = hit.key || `${hit.symbol}|${hit.tf || "D"}`;
+  let raw = (snapshot.bars && (snapshot.bars[key] || snapshot.bars[`${hit.symbol}|${hit.tf || "D"}`])) || [];
+  if (!raw.length && snapshot.live === false) {
+    const safe = String(hit.symbol || "").replace(/[^A-Za-z0-9._-]/g, "_");
+    try {
+      const res = await fetch(`bars/${safe}_${hit.tf || "D"}.json`);
+      if (res.ok) {
+        raw = await res.json();
+        snapshot.bars = snapshot.bars || {};
+        snapshot.bars[key] = raw;
+      }
+    } catch {
+      raw = [];
+    }
+    if (selected !== hitKey(hit)) return;
+  }
   const bars = Array.isArray(raw[0])
     ? raw.map(([time, open, high, low, close]) => ({ time, open, high, low, close }))
     : raw;
@@ -264,15 +283,23 @@ async function loadSnapshot() {
   }
 }
 
+let loading = false;
+
 async function refresh() {
-  snapshot = await loadSnapshot();
-  const live = snapshot.live !== false;
-  scanBtn.hidden = !live;
-  scanBtn.disabled = Boolean(snapshot.running);
-  scanBtn.textContent = snapshot.running ? "Scanning" : "Scan";
-  renderStatus();
-  renderList();
-  renderChart();
+  if (loading) return;
+  loading = true;
+  try {
+    snapshot = await loadSnapshot();
+    const live = snapshot.live !== false;
+    scanBtn.hidden = !live;
+    scanBtn.disabled = Boolean(snapshot.running);
+    scanBtn.textContent = snapshot.running ? "Scanning" : "Scan";
+    renderStatus();
+    renderList();
+    renderChart();
+  } finally {
+    loading = false;
+  }
 }
 
 form.addEventListener("submit", async (event) => {
@@ -336,5 +363,5 @@ document.querySelectorAll("[data-tf]").forEach((btn) => {
 
 await refresh();
 setInterval(() => {
-  if (snapshot.running || document.visibilityState === "visible") refresh().catch(() => {});
+  if (snapshot.live && snapshot.running) refresh().catch(() => {});
 }, 1500);

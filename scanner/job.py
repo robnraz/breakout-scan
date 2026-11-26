@@ -11,13 +11,29 @@ ROOT = Path(__file__).resolve().parent
 
 
 def publish() -> None:
+    import json
+    import re
+
     site = ROOT / "site"
     if site.exists():
         shutil.rmtree(site)
     shutil.copytree(ROOT / "static", site)
     last = ROOT / "data" / "last.json"
-    if last.exists():
-        shutil.copy(last, site / "last.json")
+    if not last.exists():
+        return
+    payload = json.loads(last.read_text())
+    bars = payload.pop("bars", None) or {}
+    (site / "last.json").write_text(json.dumps({
+        "updated": payload.get("updated"),
+        "list": payload.get("list"),
+        "hits": payload.get("hits") or [],
+    }, separators=(",", ":")))
+    bar_dir = site / "bars"
+    bar_dir.mkdir(exist_ok=True)
+    for key, rows in bars.items():
+        symbol, _, tf = key.partition("|")
+        safe = re.sub(r"[^A-Za-z0-9._-]", "_", symbol)
+        (bar_dir / f"{safe}_{tf or 'D'}.json").write_text(json.dumps(rows, separators=(",", ":")))
 
 
 def main() -> None:
